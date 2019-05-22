@@ -97,10 +97,14 @@ void registrosIniciarExpediente();
 void registrosBorrar();
 // Pagos
 void pagosRegistrar();
-void pagosConsultar();
 void pagosVisualizar();
+// Reporte
+void reporteGeneral();
 // Extras
 int calcularCosto(int _tipoMembresia);
+int calcularAdeudoTotal();
+int calcularMiembrosActivos();
+void creditos();
 /*************************************************************************/
 // *-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
 int main()
@@ -124,7 +128,7 @@ int main()
     expedientes[0].cliente = cliente[0].id;
     expedientes[0].membresiaActiva = 1;
     expedientes[0].indiceControlPagos = 0;
-    strcpy(expedientes[0].controlPagos->fechaPago,"05/16/19");
+    strcpy(expedientes[0].fechaRegistro, "23/05/19");
     expedientes[0].adeudo = -300;
     //
 
@@ -152,7 +156,10 @@ int main()
                             break;
                     case 3:	verPagos();
                             break;
-                    case 4:	printf("\nEstoy haciendo algo ahhhh....");
+                    case 4:	reporteGeneral();
+                            break;
+                    case 5: creditos();
+                        printf("\nGracias por usar nuestro sistema!\n\n");
                             return 0;
                     default: printf("\nError, opcion equivocada\n\n");
                             system("pause");
@@ -231,7 +238,6 @@ void clienteInfo()
                 printf("IMSS:\t\t %s\n\0",cliente[i].seguroSocial);
                 printf("CURP:\t\t %s\n\0",cliente[i].curp);
                 printf("\n");
-                printf("Fecha ultimo Pago:\t\t %s\n",expedientes[i].controlPagos->fechaPago);
                 printf("Adeudo:\t\t %i\n",expedientes[i].adeudo);
                 printf("Fecha de Registro:\t\t %s\n",expedientes[i].fechaRegistro);
                 printf("Membresia Activa:\t\t %i\n",expedientes[i].membresiaActiva);
@@ -599,7 +605,7 @@ void verPagos()
     {
         system("CLS");
         fflush(stdin);
-        printf("PAGOS: \n\t1.- Registrar pago.\n\t2.- Consultar adeudo.\n\t3.- Ver registro de pagos.\n\t4.- Regresar.");
+        printf("PAGOS: \n\t1.- Registrar pago.\n\t2.- Ver registro de pagos.\n\t4.- Regresar.");
         scanf("%i", &opcion_menu_pagos);
         switch (opcion_menu_pagos)
         {
@@ -607,12 +613,9 @@ void verPagos()
                 pagosRegistrar();
                 break;
             case 2:
-                printf("Aqui consultare el adeudo.\n");
+                pagosVisualizar();
                 break;
             case 3:
-                printf("Aqui visualizare los ultimos 3 pagos.\n");
-                break;
-            case 4:
                 printf("Saliendo...");
                 return;
             default:
@@ -642,6 +645,8 @@ void pagosRegistrar()
                 indiceCliente = i;
                 banderaClienteEncontrado = 1;
                 local_indiceControlPagos = expedientes[i].indiceControlPagos;
+                if (local_indiceControlPagos > 4)
+                    local_indiceControlPagos = 0;
             }
             else
             {
@@ -667,11 +672,12 @@ void pagosRegistrar()
                 printf("----------------------------------------------------\n");
 
                 // Asignadores de memoria.
+                expedientes[indiceCliente].adeudo += local_ingreseDinero;
+
                 strcpy(expedientes[indiceCliente].controlPagos[local_indiceControlPagos].fechaPago,fechaActual);
                 expedientes[indiceCliente].controlPagos[local_indiceControlPagos].abono = local_ingreseDinero;
                 expedientes[indiceCliente].indiceControlPagos++;
             }
-            // Aqui me quede 05/20/19
         }
 
 
@@ -681,6 +687,81 @@ void pagosRegistrar()
         fflush(stdin);
     }while(opcion_pagosRegistrar != 27);
 }
+
+/*************************************************************************/
+void pagosVisualizar()
+{
+    int opcion_pagosVisualizar;
+
+
+    do
+    {
+        fflush(stdin);
+        system("CLS");
+
+        printf("Codigo de cliente a registrar pago:    ");
+        scanf("%i", &codigoBusquedaRegistro);
+        for (int i = 0; i < capturadosTotales; i++)
+        {
+            if (codigoBusquedaRegistro == expedientes[i].cliente || codigoBusquedaRegistro == cliente[i].id)
+            {
+                indiceCliente = i;
+                banderaClienteEncontrado = 1;
+            }
+            else
+            {
+                banderaClienteEncontrado = 0;
+                indiceCliente = 0;
+            }
+        }
+        if (banderaClienteEncontrado == 1)
+            printf("\n El codigo: %i no se encontro en nuestros datos. \n");
+        else
+        {
+            for (int i = 0; i < 4; i++)
+            {
+                printf("----------------------------------------------------\n");
+                printf("\t\t\tPago: %i\n", i);
+                printf("Fecha de pago:\t\t %s\n", expedientes[indiceCliente].controlPagos[i].fechaPago);
+                printf("Abono:\t\t %i\n", expedientes[indiceCliente].controlPagos[i].abono);
+                printf("----------------------------------------------------\n");
+            }
+            printf("Adeudo actual: %i\n",expedientes[indiceCliente].adeudo);
+        }
+
+
+
+        printf("\nPresione ESC para salir, cualquier otra letra para continuar capturando datos.");
+        opcion_pagosVisualizar = getch();
+        fflush(stdin);
+    }while(opcion_pagosVisualizar != 27);
+
+
+
+
+
+}
+//                          Fin menu Pagos
+/*************************************************************************/
+//                          Reportes.
+void reporteGeneral()
+{
+
+
+    int adeudos = calcularAdeudoTotal();
+
+    printf("\n----------------------------------------------------\n");
+    printf("\tClientes registrados:\t %i\n", capturadosTotales);
+    printf("\tAdeudo total:\t %i\n", adeudos);
+    printf("\n----------------------------------------------------\n");
+    printf("Ultimo cliente:\n\t\t %s\tID %i\n",cliente[indiceDeRegistro].nombre, cliente[indiceDeRegistro].id);
+    printf("Fecha de registro:\t%s\n",expedientes[indiceDeRegistro].fechaRegistro);
+
+    printf("\n\nPresione cualquier tecla para continuar\n");
+    getch();
+
+}
+
 
 /*************************************************************************/
 //          Extras
@@ -705,3 +786,48 @@ int calcularCosto(int _tipoMembresia)
     }
     return costo;
 }
+/*************************************************************************/
+int calcularAdeudoTotal()
+{
+    int sumAdeudo = 0;
+
+    if (capturadosTotales == 0)
+        sumAdeudo = 0;
+    else
+    {
+        for (int i = 0; i < capturadosTotales; i++)
+            {
+                if (expedientes[i].adeudo < 0)
+                    sumAdeudo -= expedientes[i].adeudo;
+                else
+                    sumAdeudo = 0;
+            }
+    }
+
+    return sumAdeudo;
+}
+/*************************************************************************/
+int calcularMiembrosActivos()
+{
+    int sumActivos;
+    if (capturadosTotales == 0)
+        sumActivos = 0;
+    else
+    {
+        for (int i = 0; i < capturadosTotales; i++)
+            sumActivos = sumActivos + expedientes[i].membresiaActiva;
+    }
+
+    return sumActivos;
+}
+/*************************************************************************/
+void creditos()
+{
+	printf(" \n\n\n -------------------------------------------------------------------------\n");
+	printf("|\tPrograma WORLD GYM PROVIDENCIA, S.A. DE C.V.                      |\n");
+	printf("|\tVersion 1.0-a                                                     |\n");
+	printf("|\tJose Francisco Daniel Ramos Sepulveda, Programador.               |\n");
+	printf("|\tCUCEI, en Av. Revolucion 1500 en Gdl., Jalisco, Mexico            |\n");
+	printf(" ------------------------------------------------------------------------- \n\n");
+}
+
